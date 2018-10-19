@@ -1,62 +1,83 @@
-$QualityOptions = 0..51
-$PresetOptions = "ultrafast","superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"
 
-$FFMPEGLocation = $PSScriptRoot + "\ffmpeg.exe"
+# Requirements: Download FFmpeg.exe and place it in the same directory as the script.
+# FFmpeg source: https://ffmpeg.zeranoe.com/builds/
 
+# Requires PowerShell 3.0 or greater
+#Requires -Version 3.0
+
+# Last update: 2018-10-19,  Simon Sheppard
+# ss64.com/ps/syntax-video.html
+
+# Licence:
+# The GNU Lesser General Public License (LGPL) version 2.1 or later. 
+# However, FFmpeg incorporates several optional parts that are covered by
+# the GNU General Public License (GPL) version 2 or later.
+# If those parts get used then the GPL applies.
+
+# FFMPeg source 
+$FFMPEG = $PSScriptRoot + "\ffmpeg.exe"
+
+$Branding = "SS64 Video converter"
+$AllowScaling = $true  #change to $false to hide scaling options
+
+$QualityOptions = 10,20,25,30,40    # 0..50
+$ScaleOptions = 480,640,720,960,1280,1920
+$font = "Arial,10"
+Write-Host $Branding
+
+[void][System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
+$fontBold = [System.Drawing.Font]::new("Arial", 10, [System.Drawing.FontStyle]::Bold)
+
+# Build main form
 Add-Type -AssemblyName System.Windows.Forms
-
-$FFMPEG_MP4_Converter = New-Object system.Windows.Forms.Form
+$GUIform = New-Object system.Windows.Forms.Form
 [System.Windows.Forms.Application]::EnableVisualStyles()
-$FFMPEG_MP4_Converter.Text = "FFMPEG MP4 Converter"
-$FFMPEG_MP4_Converter.FormBorderStyle = 'FixedSingle'
-$FFMPEG_MP4_Converter.MaximizeBox = $false
-$FFMPEG_MP4_Converter.MinimizeBox = $false
-$FFMPEG_MP4_Converter.TopMost = $true
-$FFMPEG_MP4_Converter.Width = 275
-$FFMPEG_MP4_Converter.Height = 308
+$GUIform.Text = $Branding
+$GUIform.FormBorderStyle = 'FixedSingle'
+$GUIform.MaximizeBox = $false
+$GUIform.MinimizeBox = $false
+$GUIform.TopMost = $false
+$GUIform.Width = 510
+$GUIform.Height = 200
 
 $btnConvert = New-Object system.windows.Forms.Button
 $btnConvert.Text = "Convert"
-$btnConvert.Width = 85
-$btnConvert.Height = 24
+$btnConvert.Width = 100
+$btnConvert.Height = 50
 $btnConvert.Add_Click({
-if(Test-Path $txtVideo.Text)
-    {
+    if($txtVideo.Text -and $(Test-Path $txtVideo.Text)) {
         $lblStatus.Text = "Status: Converting Video..."
-        $convertedVideoPath = $txtVideo.Text.Substring(0, $txtVideo.Text.LastIndexOf('.')) + "_CONVERTED_" + $(get-date -f yyyy-MM-dd-mm-ss-ms) + ".mp4"
         $audioArgument = "-b:a 192k"
-        if ($chkAudio.Checked)
-        {
-          $audioArgument = "-an"
-        }
+        $videoArgument = $($txtVideo.Text)
+        $outFile = "`"" + $videoArgument.Substring(0, $txtVideo.Text.LastIndexOf('.')) + "_CONVERTED_" + $(get-date -f yyyy-MM-dd-mm-ss-ms) + ".mp4"+ "`""
+        $videoArgument = "`"" + $($txtVideo.Text) + "`""
 
-        $Argument = "-i $($txtVideo.Text) -c:v libx264 -crf $($cmbQuality.Text) -preset $($cmbPreset.Text) -strict experimental $audioArgument $convertedVideoPath"
+        $Argument = "-i $videoArgument -c:v libx264 -crf $($cmbQuality.Text) -preset faster -vf scale=$($cmbScale.Text):-2 -strict experimental $audioArgument $outFile"
 
-        Start-Process $FFMPEGLocation -ArgumentList $Argument -Wait
-
-        [System.Windows.Forms.MessageBox]::Show("Video has been converted and saved at $convertedVideoPath!" , "FFMPEG MP4 Converter") 
+        Start-Process $FFMPEG -ArgumentList $Argument -Wait
+        [System.Windows.Forms.MessageBox]::Show("Video has been converted and saved as $outFile" , $Branding) 
     }
-    else 
-    {
-        [System.Windows.Forms.MessageBox]::Show("Video file was not found or selected!" , "FFMPEG MP4 Converter") 
+    else {
+         [System.Windows.Forms.MessageBox]::Show("Video file not found." , $Branding) 
+         write-host $txtVideo.Text
     }
     $lblStatus.Text = "Status: Standby"
 })
-$btnConvert.location = new-object system.drawing.point(15,232)
-$btnConvert.Font = "Segoe UI,10"
-$FFMPEG_MP4_Converter.controls.Add($btnConvert)
+$btnConvert.location = new-object system.drawing.point(375,100)
+$btnConvert.Font = $font
+$GUIform.controls.Add($btnConvert)
 
 $txtVideo = New-Object system.windows.Forms.TextBox
-$txtVideo.Width = 227
+$txtVideo.Width = 470 #227
 $txtVideo.Height = 20
 $txtVideo.location = new-object system.drawing.point(15,28)
-$txtVideo.Font = "Segoe UI,10"
-$FFMPEG_MP4_Converter.controls.Add($txtVideo)
+$txtVideo.Font = $font
+$GUIform.controls.Add($txtVideo)
 
 $btnBrowse = New-Object system.windows.Forms.Button
-$btnBrowse.Text = "Browse"
-$btnBrowse.Width = 85
-$btnBrowse.Height = 24
+$btnBrowse.Text = "Browse..."
+$btnBrowse.Width = 100
+$btnBrowse.Height = 30
 $btnBrowse.Add_Click({
     $OpenFileDialog = New-Object System.Windows.Forms.OpenFileDialog
     $OpenFileDialog.initialDirectory = $initialDirectory
@@ -64,41 +85,41 @@ $btnBrowse.Add_Click({
     $OpenFileDialog.ShowDialog() | Out-Null
     $txtVideo.Text = $OpenFileDialog.FileName
 })
-$btnBrowse.location = new-object system.drawing.point(158,233)
-$btnBrowse.Font = "Segoe UI,10"
-$FFMPEG_MP4_Converter.controls.Add($btnBrowse)
+$btnBrowse.location = new-object system.drawing.point(375,60)
+$btnBrowse.Font = $font
+$GUIform.controls.Add($btnBrowse)
 
 $lblStatus = New-Object system.windows.Forms.Label
 $lblStatus.Text = "Status: Standby"
 $lblStatus.AutoSize = $true
 $lblStatus.Width = 25
 $lblStatus.Height = 10
-$lblStatus.location = new-object system.drawing.point(15,206)
-$lblStatus.Font = "Segoe UI,10"
-$FFMPEG_MP4_Converter.controls.Add($lblStatus)
+$lblStatus.location = new-object system.drawing.point(15,128)
+$lblStatus.Font = $fontBold
+$lblStatus.ForeColor = 'Green'
+$GUIform.controls.Add($lblStatus)
 
 $cmbQuality = New-Object system.windows.Forms.ComboBox
-$cmbQuality.Width = 229
+$cmbQuality.Width = 90
 $cmbQuality.Height = 20
 $cmbQuality.FlatStyle = "Standard"
 $cmbQuality.location = new-object system.drawing.point(15,84)
 $cmbQuality.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList;
-Foreach($Quality in $QualityOptions)
-{
-    $cmbQuality.Items.Add($Quality)
+Foreach($Quality in $QualityOptions) {
+    $cmbQuality.Items.Add($Quality) | out-null
 }
-$cmbQuality.Text = "20"
-$cmbQuality.Font = "Segoe UI,10"
-$FFMPEG_MP4_Converter.controls.Add($cmbQuality)
+$cmbQuality.Text = "25"
+$cmbQuality.Font = $font
+$GUIform.controls.Add($cmbQuality)
 
 $lblQuality = New-Object system.windows.Forms.Label
-$lblQuality.Text = "Quality (Lower is better):"
+$lblQuality.Text = "Compress [higher=smaller]:"
 $lblQuality.AutoSize = $true
 $lblQuality.Width = 25
 $lblQuality.Height = 10
 $lblQuality.location = new-object system.drawing.point(15,61)
-$lblQuality.Font = "Segoe UI,10"
-$FFMPEG_MP4_Converter.controls.Add($lblQuality)
+$lblQuality.Font = $font
+$GUIform.controls.Add($lblQuality)
 
 $lblVideo = New-Object system.windows.Forms.Label
 $lblVideo.Text = "Video:"
@@ -106,40 +127,34 @@ $lblVideo.AutoSize = $true
 $lblVideo.Width = 25
 $lblVideo.Height = 10
 $lblVideo.location = new-object system.drawing.point(15,8)
-$lblVideo.Font = "Segoe UI,10"
-$FFMPEG_MP4_Converter.controls.Add($lblVideo)
+$lblVideo.Font = $font
+$GUIform.controls.Add($lblVideo)
 
-$chkAudio = New-Object system.windows.Forms.CheckBox
-$chkAudio.Text = "Exclude Audio"
-$chkAudio.AutoSize = $true
-$chkAudio.Width = 95
-$chkAudio.Height = 20
-$chkAudio.location = new-object system.drawing.point(15,170)
-$chkAudio.Font = "Segoe UI,10"
-$FFMPEG_MP4_Converter.controls.Add($chkAudio)
-
-$cmbPreset = New-Object system.windows.Forms.ComboBox
-$cmbPreset.Width = 229
-$cmbPreset.Height = 20
-$cmbQuality.FlatStyle = "Standard"
-$cmbPreset.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList;
-$cmbPreset.location = new-object system.drawing.point(15,139)
-Foreach($Preset in $PresetOptions)
+$cmbScale = New-Object system.windows.Forms.ComboBox
+$cmbScale.Width = 90
+$cmbScale.Height = 20
+$cmbScale.FlatStyle = "Standard"
+$cmbScale.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList;
+$cmbScale.location = new-object system.drawing.point(230,84)
+Foreach($Size in $ScaleOptions)
 {
-    $cmbPreset.Items.Add($Preset)
+    $cmbScale.Items.Add($Size) | out-null
 }
-$cmbPreset.Text = "slower"
-$cmbPreset.Font = "Segoe UI,10"
-$FFMPEG_MP4_Converter.controls.Add($cmbPreset)
+$cmbScale.Text = "960"
+$cmbScale.Font = $font
+$cmbScale.visible = $AllowScaling
+$GUIform.controls.Add($cmbScale)
 
-$lblPreset = New-Object system.windows.Forms.Label
-$lblPreset.Text = "Preset:"
-$lblPreset.AutoSize = $true
-$lblPreset.Width = 25
-$lblPreset.Height = 10
-$lblPreset.location = new-object system.drawing.point(15,118)
-$lblPreset.Font = "Segoe UI,10"
-$FFMPEG_MP4_Converter.controls.Add($lblPreset)
+$lblScale = New-Object system.windows.Forms.Label
+$lblScale.Text = "Scale to:"
+$lblScale.AutoSize = $true
+$lblScale.Width = 25
+$lblScale.Height = 10
+$lblScale.location = new-object system.drawing.point(230,61)
+$lblScale.Font = $font
+$lblScale.visible = $AllowScaling
+$GUIform.controls.Add($lblScale)
 
-[void]$FFMPEG_MP4_Converter.ShowDialog()
-$FFMPEG_MP4_Converter.Dispose()
+# Display completed form
+[void]$GUIform.ShowDialog()
+$GUIform.Dispose()
