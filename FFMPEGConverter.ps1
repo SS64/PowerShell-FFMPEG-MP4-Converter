@@ -49,7 +49,7 @@ $btnConvert.Add_Click({
         $lblStatus.Text = "Status: Converting Video..."
         $audioArgument = "-b:a 192k"
         $videoArgument = $($txtVideo.Text)
-        $outFile = "`"" + $videoArgument.Substring(0, $txtVideo.Text.LastIndexOf('.')) + "_CONVERTED_" + $(get-date -f yyyy-MM-dd-mm-ss-ms) + ".mp4"+ "`""
+        $outFile = "`"" + $videoArgument.Substring(0, $txtVideo.Text.LastIndexOf('.')) + "_CONVERTED_" + $(get-date -format yyyy-MM-ddTHH-mm-ss-ff) + ".mp4"+ "`""
         $videoArgument = "`"" + $($txtVideo.Text) + "`""
 
         $Argument = "-i $videoArgument -c:v libx264 -crf $($cmbQuality.Text) -preset faster -vf scale=$($cmbScale.Text):-2 -strict experimental $audioArgument $outFile"
